@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LCSA — USA Premium Soccer Academy Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    header {
+      background: #1a2e44;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+    header span { font-size: 0.8rem; opacity: 0.7; }
+
+    #controls {
+      background: #f4f6f9;
+      border-bottom: 1px solid #dde3ec;
+      padding: 8px 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      flex-shrink: 0;
+      z-index: 999;
+    }
+    #controls label { font-size: 0.82rem; font-weight: 600; color: #444; }
+    #controls select, #controls input {
+      padding: 5px 10px;
+      border: 1px solid #bfc8d4;
+      border-radius: 5px;
+      font-size: 0.82rem;
+      background: #fff;
+      color: #333;
+      min-width: 160px;
+    }
+    #controls button {
+      padding: 5px 14px;
+      background: #1a2e44;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    #controls button:hover { background: #2d4f73; }
+    #count-badge {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    #main { display: flex; flex: 1; overflow: hidden; }
+
+    #sidebar {
+      width: 300px;
+      min-width: 260px;
+      background: #fff;
+      overflow-y: auto;
+      border-right: 1px solid #dde3ec;
+      flex-shrink: 0;
+    }
+    #sidebar-header {
+      background: #1a2e44;
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .academy-card {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eef1f5;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .academy-card:hover { background: #f0f4fa; }
+    .academy-card.active { background: #dde9f7; border-left: 3px solid #1a5fb4; }
+    .academy-card .name { font-size: 0.85rem; font-weight: 700; color: #1a2e44; margin-bottom: 2px; }
+    .academy-card .location { font-size: 0.76rem; color: #666; }
+    .academy-card .type-badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    #map { flex: 1; }
+
+    #legend {
+      background: rgba(255,255,255,0.95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      font-size: 0.78rem;
+      line-height: 1.8;
+      min-width: 190px;
+    }
+    #legend h4 { font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: #1a2e44; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; }
+    .legend-dot {
+      width: 13px; height: 13px; border-radius: 50%;
+      display: inline-block; border: 1.5px solid rgba(0,0,0,0.2);
+      flex-shrink: 0;
+    }
+
+    .leaflet-popup-content-wrapper { border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+    .leaflet-popup-content { font-family: 'Segoe UI', Arial, sans-serif; font-size: 0.82rem; line-height: 1.6; max-width: 280px; }
+    .popup-title { font-size: 0.95rem; font-weight: 700; color: #1a2e44; margin-bottom: 4px; }
+    .popup-row { margin: 2px 0; color: #444; }
+    .popup-row strong { color: #1a2e44; }
+    .popup-row a { color: #1a5fb4; text-decoration: none; }
+    .popup-row a:hover { text-decoration: underline; }
+    .popup-badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 9px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    .popup-divider { border: none; border-top: 1px solid #eee; margin: 5px 0; }
+
+    /* Mobile */
+    @media (max-width: 700px) {
+      #sidebar { display: none; }
+      header h1 { font-size: 0.95rem; }
+    }
+    @media (max-width: 500px) {
+      #controls { flex-direction: column; align-items: flex-start; }
+      #controls select, #controls input { min-width: 100%; }
+      #count-badge { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌎 LCSA — USA Premium Soccer Academy Map</h1>
+  <span>Lake Como Sport Academy · Partnership Outreach Research · May 2026</span>
+</header>
+
+<div id="controls">
+  <label for="filter-state">State:</label>
+  <select id="filter-state">
+    <option value="">All States</option>
+  </select>
+
+  <label for="filter-type">Program Type:</label>
+  <select id="filter-type">
+    <option value="">All Types</option>
+    <option value="Residential / Boarding">Residential / Boarding</option>
+    <option value="Post-Graduate / Gap Year">Post-Graduate / Gap Year</option>
+    <option value="MLS Academy (Homestay)">MLS Academy (Homestay)</option>
+    <option value="Day Program / Club Elite">Day Program / Club Elite</option>
+    <option value="Mixed / Other">Mixed / Other</option>
+  </select>
+
+  <label for="search-name">Search:</label>
+  <input type="text" id="search-name" placeholder="Academy or city name…" />
+
+  <button onclick="resetFilters()">Reset</button>
+  <span id="count-badge">Showing 0 academies</span>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div id="sidebar-header">Academy List</div>
+    <div id="academy-list"></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// ACADEMY DATA
+// ──────────────────────────────────────────────
+const academies = [
+  {
+    id: 1,
+    name: "IMG Academy",
+    city: "Bradenton", state: "FL",
+    address: "5650 Bollettieri Blvd, Bradenton, FL 34210",
+    zip: "34210",
+    lat: 27.4743, lng: -82.5753,
+    website: "https://www.imgacademy.com/boarding-school/soccer",
+    type: "Residential / Boarding",
+    tuition: "$70,500–$95,500/yr",
+    ageGroup: "U13–U19 + Post-Grad",
+    affiliations: "MLS NEXT; #1 College Placement worldwide; 140+ D1 placements/5yr",
+    directorName: "Don Cameron",
+    directorEmail: "Research needed",
+    directorLinkedIn: "https://www.linkedin.com/in/don-cameron",
+    generalEmail: "soccer@imgacademy.com",
+    generalPhone: "+1 (800) 872-6425",
+    notes: "Largest premium soccer boarding school in the USA. International partnership opportunity — HIGH PRIORITY for LCSA.",
+    intlProgram: true
+  },
+  {
+    id: 2,
+    name: "Barça Residency Academy USA",
+    city: "Casa Grande", state: "AZ",
+    address: "2684 W Gila Bend Hwy, Casa Grande, AZ 85193",
+    zip: "85193",
+    lat: 32.8792, lng: -111.7579,
+    website: "https://barcaresidencyacademyusa.com",
+    type: "Residential / Boarding",
+    tuition: "$75,900/yr",
+    ageGroup: "U13–U18",
+    affiliations: "FC Barcelona; MLS NEXT; ASU Preparatory Academy; 100% college/pro placement",
+    directorName: "Tim Alai (General Manager)",
+    directorEmail: "mkline@barcaresidencyacademyusa.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "mkline@barcaresidencyacademyusa.com",
+    generalPhone: "+1 (520) 381-8111",
+    notes: "Only FC Barcelona-affiliated residency in the USA. Every graduate earns college scholarship or pro contract. HIGH PRIORITY for LCSA.",
+    intlProgram: true
+  },
+  {
+    id: 3,
+    name: "Benfica Residential Academy",
+    city: "Saint Leo", state: "FL",
+    address: "33701 County Road 52, St. Leo, FL 33574",
+    zip: "33574",
+    lat: 28.3400, lng: -82.2638,
+    website: "https://www.benficaresidentialacademy.com",
+    type: "Residential / Boarding",
+    tuition: "~$88,000/yr",
+    ageGroup: "Grades 9–12 (co-ed)",
+    affiliations: "SL Benfica (Portugal); Saint Leo University; Launched 2025",
+    directorName: "Ruy Branco",
+    directorEmail: "info@benficaresidentialacademy.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "info@benficaresidentialacademy.com",
+    generalPhone: "+1 (888) 423-6342",
+    notes: "First and only Benfica residency in the USA (launched Fall 2025). Strong international DNA — HIGH PRIORITY for LCSA.",
+    intlProgram: true
+  },
+  {
+    id: 4,
+    name: "PSG Academy Pro Residency – Florida",
+    city: "Coconut Creek", state: "FL",
+    address: "7600 Lyons Rd, Coconut Creek, FL 33073",
+    zip: "33073",
+    lat: 26.2845, lng: -80.1698,
+    website: "https://florida.psgacademypro.com",
+    type: "Residential / Boarding",
+    tuition: "~$66,000+/yr (est.)",
+    ageGroup: "U13–U19",
+    affiliations: "Paris Saint-Germain; Nord Anglia Education; North Broward Preparatory School",
+    directorName: "Research needed",
+    directorEmail: "usa@psgacademypro.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "usa@psgacademypro.com",
+    generalPhone: "+1 (800) 390-4954",
+    notes: "PSG-branded 10-month boarding program at one of Florida's top-ranked private schools. HIGH PRIORITY for LCSA.",
+    intlProgram: true
+  },
+  {
+    id: 5,
+    name: "PSG Academy Pro Residency – Virginia",
+    city: "Mouth of Wilson", state: "VA",
+    address: "2635 Oak Hill Rd, Mouth of Wilson, VA 24363",
+    zip: "24363",
+    lat: 36.6040, lng: -81.4448,
+    website: "https://virginia.psgacademypro.com",
+    type: "Residential / Boarding",
+    tuition: "$66,188/yr",
+    ageGroup: "U13–U19",
+    affiliations: "Paris Saint-Germain; Oak Hill Academy (est. 1878)",
+    directorName: "Research needed",
+    directorEmail: "usa@psgacademypro.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "usa@psgacademypro.com",
+    generalPhone: "+1 (800) 390-4954",
+    notes: "PSG + historic Oak Hill boarding school in the Blue Ridge Mountains. International pathway. HIGH PRIORITY for LCSA.",
+    intlProgram: true
+  },
+  {
+    id: 6,
+    name: "SPIRE Academy",
+    city: "Geneva", state: "OH",
+    address: "5201 Spire Circle, Geneva, OH 44041",
+    zip: "44041",
+    lat: 41.7954, lng: -80.9578,
+    website: "https://www.spireacademy.com/academy/soccer/",
+    type: "Residential / Boarding",
+    tuition: "~$68,800/yr",
+    ageGroup: "U13–U19 (boys & girls)",
+    affiliations: "MLS NEXT; SPIRE FC Cleveland; College prep",
+    directorName: "Sean Lane",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (440) 466-1002",
+    notes: "Multi-sport boarding academy with men's and women's soccer. International student community.",
+    intlProgram: false
+  },
+  {
+    id: 7,
+    name: "EduKick USA (PIA / Mercyhurst Prep)",
+    city: "Erie", state: "PA",
+    address: "501 E 38th St, Erie, PA 16546",
+    zip: "16546",
+    lat: 42.1292, lng: -80.0851,
+    website: "https://edukick.com/us-soccer-academy/",
+    type: "Residential / Boarding",
+    tuition: "$53,990/yr (full); $32,990 (Jan–Jun)",
+    ageGroup: "Ages 14–18 (Grades 9–12)",
+    affiliations: "Mercyhurst Prep; International Baccalaureate option; NCAA eligibility support",
+    directorName: "Yaser Al-Harbi (Dir. of Coaching)",
+    directorEmail: "soccer@edukick.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "info@edukick.com",
+    generalPhone: "+1 (289) 242-1143",
+    notes: "Full boarding with IB option, domestic and international students. International intake from Europe/Middle East.",
+    intlProgram: false
+  },
+  {
+    id: 8,
+    name: "Darlington School Soccer Academy",
+    city: "Rome", state: "GA",
+    address: "1014 Cave Spring Rd SW, Rome, GA 30161",
+    zip: "30161",
+    lat: 34.2574, lng: -85.1647,
+    website: "https://www.darlingtonschool.org/Athletics/SoccerAcademy",
+    type: "Residential / Boarding",
+    tuition: "$54,980 boarding + $8,000 soccer fee",
+    ageGroup: "Grades 9–12 (boys)",
+    affiliations: "College prep; High college placement rate",
+    directorName: "Research needed",
+    directorEmail: "admission@darlingtonschool.org",
+    directorLinkedIn: "Research needed",
+    generalEmail: "admission@darlingtonschool.org",
+    generalPhone: "Research needed",
+    notes: "One of the Southeast's premier boarding schools with dedicated soccer academy. Majority of graduates play college soccer.",
+    intlProgram: false
+  },
+  {
+    id: 9,
+    name: "International Soccer Academy of America (ISAA)",
+    city: "Mishawaka", state: "IN",
+    address: "205 W Edison Rd, Mishawaka, IN 46545",
+    zip: "46545",
+    lat: 41.6614, lng: -86.1581,
+    website: "https://www.isaa.us",
+    type: "Residential / Boarding",
+    tuition: "$29,900/yr (intl); 10% income cap (domestic)",
+    ageGroup: "High school (9–12)",
+    affiliations: "Indiana Dept. of Education accredited; Villarreal CF (Spain) partnership",
+    directorName: "Krista Griffey (Executive Director)",
+    directorEmail: "KristaGriffey@ISAA.us",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Ethan@ISAA.us",
+    generalPhone: "+1 (574) 402-0100",
+    notes: "First US high school accredited specifically for soccer players. Villarreal CF partnership — STRONG international pathway.",
+    intlProgram: true
+  },
+  {
+    id: 10,
+    name: "Pre-College Development Academy (PCDA) – Charlotte",
+    city: "Charlotte", state: "NC",
+    address: "Charlotte, NC",
+    zip: "28202",
+    lat: 35.2271, lng: -80.8431,
+    website: "https://www.precollegeda.com",
+    type: "Post-Graduate / Gap Year",
+    tuition: "$10,560–$27,020/yr",
+    ageGroup: "Post-high school (18–22)",
+    affiliations: "UPSL (semi-pro); Associates degree option; NCAA eligibility preserved",
+    directorName: "David Widdison (Dir. of Performance)",
+    directorEmail: "Research needed",
+    directorLinkedIn: "https://www.linkedin.com/company/precollegeda",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "First network of post-HS residential soccer academies in USA. Gap year + college credits. Contact page at precollegeda.com.",
+    intlProgram: false
+  },
+  {
+    id: 11,
+    name: "Pre-College Development Academy (PCDA) – Denver",
+    city: "Denver", state: "CO",
+    address: "Denver, CO",
+    zip: "80202",
+    lat: 39.7392, lng: -104.9903,
+    website: "https://www.precollegeda.com/locations/",
+    type: "Post-Graduate / Gap Year",
+    tuition: "$10,560–$27,020/yr",
+    ageGroup: "Post-high school (18–22)",
+    affiliations: "UPSL (semi-pro); Associates degree option",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "PCDA Denver location — gap year residential soccer with college credits.",
+    intlProgram: false
+  },
+  {
+    id: 12,
+    name: "Pre-College Development Academy (PCDA) – Nashville",
+    city: "Nashville", state: "TN",
+    address: "Nashville, TN",
+    zip: "37201",
+    lat: 36.1627, lng: -86.7816,
+    website: "https://www.precollegeda.com/locations/",
+    type: "Post-Graduate / Gap Year",
+    tuition: "$10,560–$27,020/yr",
+    ageGroup: "Post-high school (18–22)",
+    affiliations: "UPSL (semi-pro); Associates degree option",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "PCDA Nashville location — gap year residential soccer with college credits.",
+    intlProgram: false
+  },
+  {
+    id: 13,
+    name: "Cal State Prep Academy",
+    city: "Kingsburg", state: "CA",
+    address: "Kingsburg, CA (Central Valley)",
+    zip: "93631",
+    lat: 36.5139, lng: -119.5547,
+    website: "https://calstateprep.org",
+    type: "Post-Graduate / Gap Year",
+    tuition: "Contact for pricing",
+    ageGroup: "18+ (Gap Year / Post-HS)",
+    affiliations: "UPSL; SF Bay Area residential program",
+    directorName: "Steven Vargas (founding, now retired)",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "Gap year / post-secondary UPSL program in California Central Valley. Also SF Bay Area location.",
+    intlProgram: false
+  },
+  {
+    id: 14,
+    name: "International Development Academy (IDA) – Florida",
+    city: "Daytona Beach", state: "FL",
+    address: "140 Clyde Morris Blvd, Daytona Beach, FL 32114",
+    zip: "32114",
+    lat: 29.2108, lng: -81.0228,
+    website: "https://internationalda.com/florida/",
+    type: "Residential / Boarding",
+    tuition: "Contact for pricing",
+    ageGroup: "Grades 6–12 + Post-Grad",
+    affiliations: "DME Academy; Collegiate exposure focus; International intake",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (339) 707-0165",
+    notes: "International epicenter for youth soccer in Daytona Beach. Attracts international and domestic students.",
+    intlProgram: true
+  },
+  {
+    id: 15,
+    name: "GFI Boarding Academy",
+    city: "Spring", state: "TX",
+    address: "27001 Lenze Rd, Spring, TX 77389",
+    zip: "77389",
+    lat: 30.0799, lng: -95.5594,
+    website: "https://gfiboarding.com",
+    type: "Residential / Boarding",
+    tuition: "Contact for pricing",
+    ageGroup: "U13–U19",
+    affiliations: "GFI Performance Center; MLS NEXT; European Academy (Madrid) option",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "Houston-area full-boarding soccer academy with pathway to Madrid, Spain. HIGH PRIORITY — Europe track.",
+    intlProgram: true
+  },
+  {
+    id: 16,
+    name: "International Soccer Academy (ISA) / Girona FC Program",
+    city: "Scottsdale", state: "AZ",
+    address: "Scottsdale, AZ (USA HQ)",
+    zip: "85251",
+    lat: 33.4942, lng: -111.9261,
+    website: "https://internationalsocceracademy.com",
+    type: "Post-Graduate / Gap Year",
+    tuition: "Contact for pricing",
+    ageGroup: "Post-HS / Gap Year",
+    affiliations: "La Liga's Girona FC (Spain); ASU educational partnership; Bundesliga clubs",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "Girona FC + ASU gap year residential program launching 2026. TOP PRIORITY — direct professional European pathway.",
+    intlProgram: true
+  },
+  {
+    id: 17,
+    name: "Sporting Kansas City Academy",
+    city: "Kansas City", state: "KS",
+    address: "1 Sporting Way, Kansas City, KS 66111",
+    zip: "66111",
+    lat: 39.1210, lng: -94.8239,
+    website: "https://www.sportingkcacademy.com",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; Sporting Kansas City MLS",
+    directorName: "Research needed",
+    directorEmail: "academy@sportingkc.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "academy@sportingkc.com",
+    generalPhone: "Research needed",
+    notes: "Top MLS academy. Residential homestay. Fully funded for accepted players.",
+    intlProgram: false
+  },
+  {
+    id: 18,
+    name: "Philadelphia Union Academy",
+    city: "Chester", state: "PA",
+    address: "2501 Seaport Drive, Chester, PA 19013",
+    zip: "19013",
+    lat: 39.8480, lng: -75.3684,
+    website: "https://www.philadelphiaunion.com/academy",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT (#1 ranked MLS Academy 2023–25); Philadelphia Union MLS",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (610) 497-7070",
+    notes: "#1 ranked MLS academy in the US 3 years running. Residential homestay program.",
+    intlProgram: false
+  },
+  {
+    id: 19,
+    name: "New York Red Bulls Academy",
+    city: "Harrison", state: "NJ",
+    address: "600 Cape May St, Harrison, NJ 07029",
+    zip: "07029",
+    lat: 40.7369, lng: -74.1502,
+    website: "https://www.newyorkredbulls.com/youth/academy/overview",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; NY Red Bulls MLS; Top college placements",
+    directorName: "Sean McCafferty",
+    directorEmail: "academy@newyorkredbulls.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "academy@newyorkredbulls.com",
+    generalPhone: "+1 (973) 776-8835",
+    notes: "Top MLS academy in the NY metro area. McCafferty previously directed Barça Arizona residency program.",
+    intlProgram: false
+  },
+  {
+    id: 20,
+    name: "New England Revolution Academy",
+    city: "Foxborough", state: "MA",
+    address: "1 Patriot Place, Foxborough, MA 02035",
+    zip: "02035",
+    lat: 42.0909, lng: -71.2643,
+    website: "https://www.revolutionsoccer.net/academy",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; New England Revolution MLS",
+    directorName: "Rob Becerra (Dir. Youth Development)",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (508) 543-0350",
+    notes: "Top MLS academy in New England region. Residency coordinator program in place.",
+    intlProgram: false
+  },
+  {
+    id: 21,
+    name: "Columbus Crew Academy",
+    city: "Columbus", state: "OH",
+    address: "96 Columbus Crew Way, Columbus, OH 43215",
+    zip: "43215",
+    lat: 39.9611, lng: -82.9988,
+    website: "https://www.columbuscrew.com/academy",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; Columbus Crew MLS",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (614) 447-2739",
+    notes: "MLS academy with homestay residential program for out-of-market players.",
+    intlProgram: false
+  },
+  {
+    id: 22,
+    name: "LA Galaxy Academy",
+    city: "Carson", state: "CA",
+    address: "18400 Avalon Blvd, Carson, CA 90746",
+    zip: "90746",
+    lat: 33.8643, lng: -118.2611,
+    website: "https://www.lagalaxy.com/academy",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; LA Galaxy MLS; Host family program ($500/mo stipend)",
+    directorName: "William Bizzaro (Academy Manager)",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (310) 630-2200",
+    notes: "One of the most prominent MLS academies on the West Coast. International players welcome.",
+    intlProgram: false
+  },
+  {
+    id: 23,
+    name: "FC Dallas Academy",
+    city: "Frisco", state: "TX",
+    address: "9200 World Cup Way Suite 202, Frisco, TX 75033",
+    zip: "75033",
+    lat: 33.1584, lng: -96.8222,
+    website: "https://www.fcdallas.com/youth",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U13–U19",
+    affiliations: "MLS NEXT; FC Dallas MLS",
+    directorName: "Scott James (College Director)",
+    directorEmail: "sjames@fcdallas.net",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "+1 (469) 365-0000",
+    notes: "Top Texas MLS academy. Known for producing MLS homegrown players.",
+    intlProgram: false
+  },
+  {
+    id: 24,
+    name: "Colorado Rapids Youth Soccer Academy",
+    city: "Commerce City", state: "CO",
+    address: "6000 Victory Way, Commerce City, CO 80022",
+    zip: "80022",
+    lat: 39.8050, lng: -104.8921,
+    website: "https://rapidsyouthsoccer.org",
+    type: "Day Program / Club Elite",
+    tuition: "Contact for pricing",
+    ageGroup: "U9–U19",
+    affiliations: "MLS NEXT; ECNL Boys; Colorado Rapids MLS",
+    directorName: "Daniel Agnew (Elite ECNL Boys Dir.)",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "Elite residential summer camps available. MLS-affiliated with strong development pathway.",
+    intlProgram: false
+  },
+  {
+    id: 25,
+    name: "Crossfire Premier Soccer",
+    city: "Redmond", state: "WA",
+    address: "7525 166th Ave NE, Redmond, WA 98052",
+    zip: "98052",
+    lat: 47.6740, lng: -122.1215,
+    website: "https://www.crossfiresoccer.org",
+    type: "Day Program / Club Elite",
+    tuition: "Contact for pricing",
+    ageGroup: "U10–U19",
+    affiliations: "AS Roma (Italy) official affiliation; Annual European tours; ECNL",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Research needed",
+    generalPhone: "Research needed",
+    notes: "AS Roma affiliation. Only non-professional DA club in Pacific Northwest. European tours annually vs. Real Madrid, PSG, etc.",
+    intlProgram: true
+  },
+  {
+    id: 26,
+    name: "SAI Academy – Orlando City SC",
+    city: "Orlando", state: "FL",
+    address: "2 Village Dr, Ocoee, FL 34761",
+    zip: "34761",
+    lat: 28.5656, lng: -81.5440,
+    website: "https://saiacademy.com/campuses/orlando-city-sc/",
+    type: "Mixed / Other",
+    tuition: "Contact for pricing",
+    ageGroup: "U14+",
+    affiliations: "Orlando City SC MLS; NCAA-accredited curriculum",
+    directorName: "Research needed",
+    directorEmail: "admissions@saiacademy.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "admissions@saiacademy.com",
+    generalPhone: "Research needed",
+    notes: "SAI Academy provides flexible schooling for elite athletes at MLS club academies. Multiple campus locations.",
+    intlProgram: false
+  },
+  {
+    id: 27,
+    name: "SAI Academy – Austin FC",
+    city: "Austin", state: "TX",
+    address: "10414 McKalla Place, Austin, TX 78758",
+    zip: "78758",
+    lat: 30.3875, lng: -97.7186,
+    website: "https://saiacademy.com/campuses/austin-fc/",
+    type: "Mixed / Other",
+    tuition: "Contact for pricing",
+    ageGroup: "U14+",
+    affiliations: "Austin FC MLS; NCAA-accredited curriculum",
+    directorName: "Research needed",
+    directorEmail: "admissions@saiacademy.com",
+    directorLinkedIn: "Research needed",
+    generalEmail: "admissions@saiacademy.com",
+    generalPhone: "Research needed",
+    notes: "Flexible academic program supporting Austin FC academy players.",
+    intlProgram: false
+  },
+  {
+    id: 28,
+    name: "Atlanta United Academy",
+    city: "Marietta", state: "GA",
+    address: "7165 Stadium Dr NE, Marietta, GA 30062",
+    zip: "30062",
+    lat: 33.9526, lng: -84.5499,
+    website: "https://www.atlutd.com/academy",
+    type: "MLS Academy (Homestay)",
+    tuition: "Fully funded",
+    ageGroup: "U12–U19",
+    affiliations: "MLS NEXT; Atlanta United MLS; 7 youth teams",
+    directorName: "Research needed",
+    directorEmail: "Research needed",
+    directorLinkedIn: "Research needed",
+    generalEmail: "Justin.Veldhuis@atlutd.com",
+    generalPhone: "+1 (678) 924-3900",
+    notes: "One of the largest MLS youth academy structures in the South. CS Henderson oversees sports operations.",
+    intlProgram: false
+  }
+];
+
+// ──────────────────────────────────────────────
+// COLOR MAP
+// ──────────────────────────────────────────────
+const typeColors = {
+  "Residential / Boarding": "#e53935",
+  "Post-Graduate / Gap Year": "#1565c0",
+  "MLS Academy (Homestay)": "#2e7d32",
+  "Day Program / Club Elite": "#f9a825",
+  "Mixed / Other": "#7b1fa2"
+};
+
+function getColor(type) {
+  return typeColors[type] || "#888";
+}
+
+function createCircleIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:16px;height:16px;background:${color};border:2.5px solid rgba(0,0,0,0.3);border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10]
+  });
+}
+
+// ──────────────────────────────────────────────
+// MAP INIT
+// ──────────────────────────────────────────────
+const map = L.map('map', { center: [38.5, -96.5], zoom: 4 });
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18
+}).addTo(map);
+
+// Legend
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function() {
+  const div = L.DomUtil.create('div', '');
+  div.id = 'legend';
+  div.innerHTML = `<h4>Program Type</h4>` +
+    Object.entries(typeColors).map(([type, color]) =>
+      `<div class="legend-row"><span class="legend-dot" style="background:${color}"></span><span>${type}</span></div>`
+    ).join('') +
+    `<hr style="margin:6px 0;border-color:#eee"><div style="font-size:0.7rem;color:#888;">⭐ = Intl. Partnership</div>`;
+  return div;
+};
+legend.addTo(map);
+
+// ──────────────────────────────────────────────
+// MARKER + POPUP
+// ──────────────────────────────────────────────
+const markers = [];
+const markerLayers = [];
+
+function buildPopup(a) {
+  const color = getColor(a.type);
+  const intlFlag = a.intlProgram ? ' ⭐' : '';
+  const emailLink = a.directorEmail && a.directorEmail !== 'Research needed'
+    ? `<a href="mailto:${a.directorEmail}">${a.directorEmail}</a>` : 'Research needed';
+  const websiteLink = `<a href="${a.website}" target="_blank">${a.website.replace('https://','').replace('http://','').split('/')[0]}</a>`;
+  const genEmailLink = a.generalEmail && a.generalEmail !== 'Research needed'
+    ? `<a href="mailto:${a.generalEmail}">${a.generalEmail}</a>` : 'Research needed';
+
+  return `
+    <div class="popup-title">${a.name}${intlFlag}</div>
+    <span class="popup-badge" style="background:${color}">${a.type}</span>
+    <div class="popup-row">${a.city}, ${a.state} · ${a.address}</div>
+    <hr class="popup-divider"/>
+    <div class="popup-row"><strong>Tuition:</strong> ${a.tuition}</div>
+    <div class="popup-row"><strong>Age Group:</strong> ${a.ageGroup}</div>
+    <div class="popup-row"><strong>Affiliations:</strong> ${a.affiliations}</div>
+    <hr class="popup-divider"/>
+    <div class="popup-row"><strong>Director:</strong> ${a.directorName}</div>
+    <div class="popup-row"><strong>Director Email:</strong> ${emailLink}</div>
+    <div class="popup-row"><strong>General Email:</strong> ${genEmailLink}</div>
+    <div class="popup-row"><strong>Phone:</strong> ${a.generalPhone}</div>
+    <div class="popup-row"><strong>Website:</strong> ${websiteLink}</div>
+    ${a.notes ? `<hr class="popup-divider"/><div class="popup-row" style="font-style:italic;color:#555;">${a.notes}</div>` : ''}
+  `;
+}
+
+academies.forEach((a, i) => {
+  const color = getColor(a.type);
+  const marker = L.marker([a.lat, a.lng], { icon: createCircleIcon(color) })
+    .bindPopup(buildPopup(a), { maxWidth: 300 });
+  marker.academyId = a.id;
+  marker.addTo(map);
+  markers.push({ marker, academy: a });
+  markerLayers.push(marker);
+});
+
+// ──────────────────────────────────────────────
+// SIDEBAR
+// ──────────────────────────────────────────────
+function buildSidebar(filtered) {
+  const list = document.getElementById('academy-list');
+  list.innerHTML = '';
+  filtered.forEach(a => {
+    const color = getColor(a.type);
+    const card = document.createElement('div');
+    card.className = 'academy-card';
+    card.dataset.id = a.id;
+    card.innerHTML = `
+      <div class="name">${a.intlProgram ? '⭐ ' : ''}${a.name}</div>
+      <div class="location">${a.city}, ${a.state}</div>
+      <span class="type-badge" style="background:${color}">${a.type}</span>
+    `;
+    card.addEventListener('click', () => {
+      map.setView([a.lat, a.lng], 9, { animate: true });
+      const m = markers.find(m => m.academy.id === a.id);
+      if (m) m.marker.openPopup();
+      document.querySelectorAll('.academy-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+    });
+    list.appendChild(card);
+  });
+  document.getElementById('count-badge').textContent = `Showing ${filtered.length} of ${academies.length} academies`;
+}
+
+// ──────────────────────────────────────────────
+// FILTER LOGIC
+// ──────────────────────────────────────────────
+// Populate state dropdown
+const states = [...new Set(academies.map(a => a.state))].sort();
+const stateSelect = document.getElementById('filter-state');
+states.forEach(s => {
+  const o = document.createElement('option');
+  o.value = s; o.textContent = s;
+  stateSelect.appendChild(o);
+});
+
+function applyFilters() {
+  const stateVal = document.getElementById('filter-state').value;
+  const typeVal = document.getElementById('filter-type').value;
+  const searchVal = document.getElementById('search-name').value.toLowerCase().trim();
+
+  const filtered = academies.filter(a => {
+    const matchState = !stateVal || a.state === stateVal;
+    const matchType = !typeVal || a.type === typeVal;
+    const matchSearch = !searchVal ||
+      a.name.toLowerCase().includes(searchVal) ||
+      a.city.toLowerCase().includes(searchVal) ||
+      a.state.toLowerCase().includes(searchVal);
+    return matchState && matchType && matchSearch;
+  });
+
+  markers.forEach(({ marker, academy }) => {
+    const visible = filtered.some(a => a.id === academy.id);
+    if (visible) { if (!map.hasLayer(marker)) marker.addTo(map); }
+    else { if (map.hasLayer(marker)) map.removeLayer(marker); }
+  });
+
+  buildSidebar(filtered);
+}
+
+function resetFilters() {
+  document.getElementById('filter-state').value = '';
+  document.getElementById('filter-type').value = '';
+  document.getElementById('search-name').value = '';
+  applyFilters();
+}
+
+document.getElementById('filter-state').addEventListener('change', applyFilters);
+document.getElementById('filter-type').addEventListener('change', applyFilters);
+document.getElementById('search-name').addEventListener('input', applyFilters);
+
+// Initial render
+applyFilters();
+</script>
+</body>
+</html>
