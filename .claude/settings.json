@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "postiz@claude-plugins-official": true
+  }
+}
